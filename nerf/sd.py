@@ -17,7 +17,7 @@ def seed_everything(seed):
     #torch.backends.cudnn.benchmark = True
 
 class StableDiffusion(nn.Module):
-    def __init__(self, device):
+    def __init__(self, device, stable_diffusion_checkpoint="runwayml/stable-diffusion-v1-5"):
         super().__init__()
 
         try:
@@ -27,23 +27,23 @@ class StableDiffusion(nn.Module):
         except FileNotFoundError as e:
             self.token = True
             print(f'[INFO] try to load hugging face access token from the default place, make sure you have run `huggingface-cli login`.')
-        
+
         self.device = device
         self.num_train_timesteps = 1000
         self.min_step = int(self.num_train_timesteps * 0.02)
         self.max_step = int(self.num_train_timesteps * 0.98)
 
         print(f'[INFO] loading stable diffusion...')
-                
-        # 1. Load the autoencoder model which will be used to decode the latents into image space. 
-        self.vae = AutoencoderKL.from_pretrained("runwayml/stable-diffusion-v1-5", subfolder="vae", use_auth_token=self.token).to(self.device)
 
-        # 2. Load the tokenizer and text encoder to tokenize and encode the text. 
+        # 1. Load the autoencoder model which will be used to decode the latents into image space.
+        self.vae = AutoencoderKL.from_pretrained(stable_diffusion_checkpoint, subfolder="vae", use_auth_token=self.token).to(self.device)
+
+        # 2. Load the tokenizer and text encoder to tokenize and encode the text.
         self.tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-large-patch14")
         self.text_encoder = CLIPTextModel.from_pretrained("openai/clip-vit-large-patch14").to(self.device)
 
         # 3. The UNet model for generating the latents.
-        self.unet = UNet2DConditionModel.from_pretrained("runwayml/stable-diffusion-v1-5", subfolder="unet", use_auth_token=self.token).to(self.device)
+        self.unet = UNet2DConditionModel.from_pretrained(stable_diffusion_checkpoint, subfolder="unet", use_auth_token=self.token).to(self.device)
 
         # 4. Create a scheduler for inference
         self.scheduler = PNDMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", num_train_timesteps=self.num_train_timesteps)
@@ -72,7 +72,7 @@ class StableDiffusion(nn.Module):
 
 
     def train_step(self, text_embeddings, pred_rgb, guidance_scale=100):
-        
+
         # interp to 512x512 to be fed into vae.
 
         # _t = time.time()
@@ -139,7 +139,7 @@ class StableDiffusion(nn.Module):
 
                 # compute the previous noisy sample x_t -> x_t-1
                 latents = self.scheduler.step(noise_pred, t, latents)['prev_sample']
-        
+
         return latents
 
     def decode_latents(self, latents):
@@ -150,7 +150,7 @@ class StableDiffusion(nn.Module):
             imgs = self.vae.decode(latents).sample
 
         imgs = (imgs / 2 + 0.5).clamp(0, 1)
-        
+
         return imgs
 
     def encode_imgs(self, imgs):
@@ -167,7 +167,7 @@ class StableDiffusion(nn.Module):
 
         if isinstance(prompts, str):
             prompts = [prompts]
-        
+
         if isinstance(negative_prompts, str):
             negative_prompts = [negative_prompts]
 
@@ -176,7 +176,7 @@ class StableDiffusion(nn.Module):
 
         # Text embeds -> img latents
         latents = self.produce_latents(text_embeds, height=height, width=width, latents=latents, num_inference_steps=num_inference_steps, guidance_scale=guidance_scale) # [1, 4, 64, 64]
-        
+
         # Img latents -> imgs
         imgs = self.decode_latents(latents) # [1, 3, 512, 512]
 
