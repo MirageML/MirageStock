@@ -86,7 +86,6 @@ if __name__ == '__main__':
     parser.add_argument('--use_smooth_shade', type=bool,  default=False, help="Smooth or Flat")
     parser.add_argument('--voxel_size', type=float, default=0.1, help="Voxel Size")
     parser.add_argument('--decimate_ratio', type=float, default=1.0 help="Ratio of reduction, Example: 0.5 mean half number of faces ")
-
     parser.add_argument('--quads', type=bool,  default=False, help="Triangles or Quads")
 
     opt = parser.parse_args()
