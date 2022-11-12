@@ -33,7 +33,7 @@ def get_args():
   parser.add_argument('-t', '--threshold', type=float, default=1.0, help="Threshold")
   parser.add_argument('-smooth', '--use_smooth_shade', type=bool,  default=False, help="Smooth or Flat")
   parser.add_argument('-v', '--voxel_size', type=float, default=0.1, help="Voxel Size")
-  parser.add_argument('-dec', '--decimate_ratio', type=float, default=1.0 help="Ratio of reduction, Example: 0.5 mean half number of faces ")
+  parser.add_argument('-dec', '--decimate_ratio', type=float, default=1.0, help="Ratio of reduction, Example: 0.5 mean half number of faces ")
 
   parsed_script_args, _ = parser.parse_known_args(script_args)
   return parsed_script_args
@@ -95,15 +95,21 @@ for i, obj in enumerate(meshes):
 
   # Decimate
   modifier = obj.modifiers.new(modifierName,'DECIMATE')
-  modifier.ratio = 1.0
+  modifier.ratio = args.decimate_ratio
   modifier.use_collapse_triangulate = True
   bpy.ops.object.modifier_apply(modifier=modifierName)
   print("{} has {} verts, {} edges, {} polys after decimation".format(obj.name, len(obj.data.vertices), len(obj.data.edges), len(obj.data.polygons)))
 
   # Remesh
   modifier = obj.modifiers.new(modifierName,'REMESH')
-  modifier.mode = "SMOOTH"
-  modifier.octree_depth = 6
+  modifier.adaptivity = args.adaptivity
+  modifier.mode = args.mode
+  modifier.octree_depth = args.octree_depth
+  modifier.scale = args.scale
+  modifier.sharpness = args.sharpness
+  modifier.threshold = args.threshold
+  modifier.use_smooth_shade = args.use_smooth_shade
+  modifier.voxel_size = args.voxel_size
   bpy.ops.object.modifier_apply(modifier=modifierName)
 
   print("{} has {} verts, {} edges, {} polys after remesh".format(obj.name, len(obj.data.vertices), len(obj.data.edges), len(obj.data.polygons)))
