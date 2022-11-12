@@ -87,6 +87,20 @@ if __name__ == '__main__':
     parser.add_argument('--light_phi', type=float, default=0, help="default GUI light direction in [0, 360), azimuth")
     parser.add_argument('--max_spp', type=int, default=1, help="GUI rendering max sample per pixel")
 
+    ### Clean Mesh Options
+    parser.add_argument('--clean_mesh', type=bool,  default=False, help="clean_mesh")
+    parser.add_argument('--adaptivity', type=float, default=0.0, help="Adaptivity")
+    parser.add_argument('--mode', type=str, default="BLOCKS", help="Mode")
+    parser.add_argument('--octree_depth', type=int, default=4, help="Mode")
+    parser.add_argument('--scale', type=float, default=0.9, help="Scale")
+    parser.add_argument('--sharpness', type=float, default=1.0, help="Threshold")
+    parser.add_argument('--threshold', type=float, default=1.0, help="Threshold")
+    parser.add_argument('--use_smooth_shade', type=bool,  default=False, help="Smooth or Flat")
+    parser.add_argument('--voxel_size', type=float, default=0.1, help="Voxel Size")
+    parser.add_argument('--decimate_ratio', type=float, default=1.0 help="Ratio of reduction, Example: 0.5 mean half number of faces ")
+
+    parser.add_argument('--quads', type=bool,  default=False, help="Triangles or Quads")
+
     opt = parser.parse_args()
 
     if opt.O:
@@ -135,9 +149,21 @@ if __name__ == '__main__':
             trainer.test(test_loader)
 
             if opt.save_mesh:
-                # a special loader for poisson mesh reconstruction,
-                # loader = NeRFDataset(opt, device=device, type='test', H=128, W=128, size=100).dataloader()
-                trainer.save_mesh()
+                args = {
+                    'clean_mesh': opt.clean_mesh,
+                    'adaptivity': opt.adaptivity,
+                    'mode': opt.mode,
+                    'octree_depth': opt.octree_depth,
+                    'scale': opt.scale,
+                    'sharpness': opt.sharpness,
+                    'threshold': opt.threshold,
+                    'use_smooth_shade': opt.use_smooth_shade,
+                    'voxel_size': opt.voxel_size,
+                    'decimate_ratio': opt.decimate_ratio,
+                    'quads': opt.quads
+                }
+                trainer.save_mesh(args=args)
+
 
     else:
 
