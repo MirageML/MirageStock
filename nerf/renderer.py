@@ -122,7 +122,7 @@ class NeRFRenderer(nn.Module):
             self.mean_count = 0
             self.local_step = 0
 
-    
+
     def forward(self, x, d):
         raise NotImplementedError()
 
@@ -134,7 +134,7 @@ class NeRFRenderer(nn.Module):
 
     def reset_extra_state(self):
         if not self.cuda_ray:
-            return 
+            return
         # density grid
         self.density_grid.zero_()
         self.mean_density = 0
@@ -145,7 +145,7 @@ class NeRFRenderer(nn.Module):
         self.local_step = 0
 
     @torch.no_grad()
-    def export_mesh(self, path, resolution=None, S=128):
+    def export_mesh(self, path, resolution=None, S=128, args=None):
 
         if resolution is None:
             resolution = self.grid_size
@@ -225,10 +225,10 @@ class NeRFRenderer(nn.Module):
             xyzs, _ = dr.interpolate(v.unsqueeze(0), rast, f) # [1, h, w, 3]
             mask, _ = dr.interpolate(torch.ones_like(v[:, :1]).unsqueeze(0), rast, f) # [1, h, w, 1]
 
-            # masked query 
+            # masked query
             xyzs = xyzs.view(-1, 3)
             mask = (mask > 0).view(-1)
-            
+
             sigmas = torch.zeros(h * w, device=device, dtype=torch.float32)
             feats = torch.zeros(h * w, 3, device=device, dtype=torch.float32)
 
@@ -248,7 +248,7 @@ class NeRFRenderer(nn.Module):
 
                 sigmas[mask] = torch.cat(all_sigmas, dim=0)
                 feats[mask] = torch.cat(all_feats, dim=0)
-            
+
             sigmas = sigmas.view(h, w, 1)
             feats = feats.view(h, w, -1)
             mask = mask.view(h, w)
@@ -301,14 +301,14 @@ class NeRFRenderer(nn.Module):
             print(f'[INFO] writing obj mesh to {obj_file}')
             with open(obj_file, "w") as fp:
                 fp.write(f'mtllib {name}mesh.mtl \n')
-                
+
                 print(f'[INFO] writing vertices {v_np.shape}')
                 for v in v_np:
                     fp.write(f'v {v[0]} {v[1]} {v[2]} \n')
-            
+
                 print(f'[INFO] writing vertices texture coords {vt_np.shape}')
                 for v in vt_np:
-                    fp.write(f'vt {v[0]} {1 - v[1]} \n') 
+                    fp.write(f'vt {v[0]} {1 - v[1]} \n')
 
                 print(f'[INFO] writing faces {f_np.shape}')
                 fp.write(f'usemtl mat0 \n')
@@ -325,7 +325,42 @@ class NeRFRenderer(nn.Module):
                 fp.write(f'Ns 0.000000 \n')
                 fp.write(f'map_Kd {name}albedo.png \n')
 
+        clean_mesh = args.get("clean_mesh", False)
+        if clean_mesh:
+            _export(v, f, h0=2048, w0=2048, ssaa=1, name='temp_')
+
+            temp_file = os.path.join(path, f'temp_mesh.obj')
+            temp_cleaned_file = os.path.join(path, f'temp_mesh_cleaned.obj')
+
+            # os.system(f"blender -b -P blender_remesh_dec.py -- -in {temp_file} -out {temp_cleaned_file}")
+            os.system(f"blender -b -P blender_remesh_dec.py -- " +
+                        f"-in {temp_file} -out {temp_cleaned_file} " +
+                        f"-adp {args.get('adaptivity', 0.0)} " +
+                        f"-m {args.get('mode', 'SMOOTH')} " +
+                        f"-oct {args.get('octree_depth', 6)} " +
+                        f"-s {args.get('scale', 0.9)} " +
+                        f"-sh {args.get('sharpness', 1.0)} " +
+                        f"-t {args.get('threshold', 1.0)} " +
+                        f"-smooth {args.get('use_smooth_shade', False)} " +
+                        f"-v {args.get('voxel_size', 0.1)} " +
+                        f"-dec {args.get('decimate_ratio', 1.0)} ")
+
+            mesh = trimesh.load(temp_cleaned_file)
+            v_fixed, f_fixed = mesh.vertices, mesh.faces
+            v = torch.from_numpy(v_fixed.astype(np.float32)).float().to(self.density_bitfield.device)
+            f = torch.from_numpy(f_fixed.astype(np.int64)).int().to(self.density_bitfield.device)
+
+            # remove temp files
+            os.remove(os.path.join(path, f'temp_mesh.obj'))
+            os.remove(os.path.join(path, f'temp_mesh.mtl'))
+            os.remove(os.path.join(path, f'temp_albedo.png'))
+            os.remove(os.path.join(path, f'temp_mesh_cleaned.obj'))
+            os.remove(os.path.join(path, f'temp_mesh_cleaned.mtl'))
+
         _export(v, f)
+        obj_file = os.path.join(path, f'mesh.obj')
+        os.system(f"blender -b -P blender_cleanup.py -- -in {obj_file} -out {obj_file} -quads {args.get("quads", False)}")
+
 
     def run(self, rays_o, rays_d, num_steps=128, upsample_steps=128, light_d=None, ambient_ratio=1.0, shading='albedo', bg_color=None, perturb=False, **kwargs):
         # rays_o, rays_d: [B, N, 3], assumes B == 1
@@ -442,8 +477,8 @@ class NeRFRenderer(nn.Module):
 
         # calculate weight_sum (mask)
         weights_sum = weights.sum(dim=-1) # [N]
-        
-        # calculate depth 
+
+        # calculate depth
         ori_z_vals = ((z_vals - nears) / (fars - nears)).clamp(0, 1)
         depth = torch.sum(weights * ori_z_vals, dim=-1)
 
@@ -457,7 +492,7 @@ class NeRFRenderer(nn.Module):
             bg_color = self.background(rays_d.reshape(-1, 3)) # [N, 3]
         elif bg_color is None:
             bg_color = 1
-            
+
         image = image + (1 - weights_sum).unsqueeze(-1) * bg_color
 
         image = image.view(*prefix, 3)
@@ -504,7 +539,7 @@ class NeRFRenderer(nn.Module):
             xyzs, dirs, deltas, rays = raymarching.march_rays_train(rays_o, rays_d, self.bound, self.density_bitfield, self.cascade, self.grid_size, nears, fars, counter, self.mean_count, perturb, 128, force_all_rays, dt_gamma, max_steps)
 
             #plot_pointcloud(xyzs.reshape(-1, 3).detach().cpu().numpy())
-            
+
             sigmas, rgbs, normals = self(xyzs, dirs, light_d, ratio=ambient_ratio, shading=shading)
 
             #print(f'valid RGB query ratio: {mask.sum().item() / mask.shape[0]} (total = {mask.sum().item()})')
@@ -524,23 +559,23 @@ class NeRFRenderer(nn.Module):
                 results['loss_smooth'] = loss_smooth.mean()
 
         else:
-           
-            # allocate outputs 
+
+            # allocate outputs
             dtype = torch.float32
-            
+
             weights_sum = torch.zeros(N, dtype=dtype, device=device)
             depth = torch.zeros(N, dtype=dtype, device=device)
             image = torch.zeros(N, 3, dtype=dtype, device=device)
-            
+
             n_alive = N
             rays_alive = torch.arange(n_alive, dtype=torch.int32, device=device) # [N]
             rays_t = nears.clone() # [N]
 
             step = 0
-            
+
             while step < max_steps: # hard coded max step
 
-                # count alive rays 
+                # count alive rays
                 n_alive = rays_alive.shape[0]
 
                 # exit loop
@@ -563,7 +598,7 @@ class NeRFRenderer(nn.Module):
 
         # mix background color
         if self.bg_radius > 0:
-            
+
             # use the bg model to calculate bg_color
             # sph = raymarching.sph_from_ray(rays_o, rays_d, self.bg_radius) # [N, 2] in [-1, 1]
             bg_color = self.background(rays_d) # [N, 3]
@@ -594,11 +629,11 @@ class NeRFRenderer(nn.Module):
         # call before each epoch to update extra states.
 
         if not self.cuda_ray:
-            return 
-        
+            return
+
         ### update density grid
         tmp_grid = - torch.ones_like(self.density_grid)
-        
+
         X = torch.arange(self.grid_size, dtype=torch.int32, device=self.aabb_train.device).split(S)
         Y = torch.arange(self.grid_size, dtype=torch.int32, device=self.aabb_train.device).split(S)
         Z = torch.arange(self.grid_size, dtype=torch.int32, device=self.aabb_train.device).split(S)
@@ -606,7 +641,7 @@ class NeRFRenderer(nn.Module):
         for xs in X:
             for ys in Y:
                 for zs in Z:
-                    
+
                     # construct points
                     xx, yy, zz = custom_meshgrid(xs, ys, zs)
                     coords = torch.cat([xx.reshape(-1, 1), yy.reshape(-1, 1), zz.reshape(-1, 1)], dim=-1) # [N, 3], in [0, 128)
@@ -623,9 +658,9 @@ class NeRFRenderer(nn.Module):
                         cas_xyzs += (torch.rand_like(cas_xyzs) * 2 - 1) * half_grid_size
                         # query density
                         sigmas = self.density(cas_xyzs)['sigma'].reshape(-1).detach()
-                        # assign 
+                        # assign
                         tmp_grid[cas, indices] = sigmas
-        
+
         # ema update
         valid_mask = self.density_grid >= 0
         self.density_grid[valid_mask] = torch.maximum(self.density_grid[valid_mask] * decay, tmp_grid[valid_mask])
@@ -672,7 +707,7 @@ class NeRFRenderer(nn.Module):
                     weights_sum[b:b+1, head:tail] = results_['weights_sum']
                     image[b:b+1, head:tail] = results_['image']
                     head += max_ray_batch
-            
+
             results = {}
             results['depth'] = depth
             results['image'] = image
