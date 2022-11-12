@@ -119,7 +119,7 @@ class NeRFRenderer(nn.Module):
         self.local_step = 0
 
     @torch.no_grad()
-    def export_mesh(self, path, resolution=None, S=128, args=None):
+    def export_mesh(self, path, resolution=None, S=128, args={}):
 
         if resolution is None:
             resolution = self.grid_size
@@ -330,7 +330,7 @@ class NeRFRenderer(nn.Module):
 
         _export(v, f)
         obj_file = os.path.join(path, f'mesh.obj')
-        os.system(f"blender -b -P blender_cleanup.py -- -in {obj_file} -out {obj_file} -quads {args.get("quads", False)}")
+        os.system(f"blender -b -P blender_cleanup.py -- -in {obj_file} -out {obj_file} -quads {args.get('quads', False)}")
 
 
     def run(self, rays_o, rays_d, num_steps=128, upsample_steps=128, light_d=None, ambient_ratio=1.0, shading='albedo', bg_color=None, perturb=False, **kwargs):
