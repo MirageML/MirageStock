@@ -78,8 +78,8 @@ if __name__ == '__main__':
     ### Clean Mesh Options
     parser.add_argument('--clean_mesh', type=bool,  default=False, help="clean_mesh")
     parser.add_argument('--adaptivity', type=float, default=0.0, help="Adaptivity")
-    parser.add_argument('--mode', type=str, default="BLOCKS", help="Mode")
-    parser.add_argument('--octree_depth', type=int, default=4, help="Mode")
+    parser.add_argument('--mode', type=str, default="SMOOTH", help="Mode")
+    parser.add_argument('--octree_depth', type=int, default=6, help="Mode")
     parser.add_argument('--scale', type=float, default=0.9, help="Scale")
     parser.add_argument('--sharpness', type=float, default=1.0, help="Threshold")
     parser.add_argument('--threshold', type=float, default=1.0, help="Threshold")
