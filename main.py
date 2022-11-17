@@ -74,7 +74,7 @@ if __name__ == '__main__':
     parser.add_argument('--max_spp', type=int, default=1, help="GUI rendering max sample per pixel")
 
     ### Clean Mesh Options
-    parser.add_argument('--clean_mesh', type=bool,  default=False, help="clean_mesh")
+    parser.add_argument('--clean_mesh', type=str,  default="false", help="clean_mesh")
     parser.add_argument('--adaptivity', type=float, default=0.0, help="Adaptivity")
     parser.add_argument('--mode', type=str, default="SMOOTH", help="Mode")
     parser.add_argument('--octree_depth', type=int, default=6, help="Mode")
@@ -84,9 +84,12 @@ if __name__ == '__main__':
     parser.add_argument('--use_smooth_shade', type=bool,  default=False, help="Smooth or Flat")
     parser.add_argument('--voxel_size', type=float, default=0.1, help="Voxel Size")
     parser.add_argument('--decimate_ratio', type=float, default=1.0, help="Ratio of reduction, Example: 0.5 mean half number of faces ")
-    parser.add_argument('--quads', type=bool,  default=False, help="Triangles or Quads")
+    parser.add_argument('--quads', type=str,  default="false", help="Triangles or Quads")
 
     opt = parser.parse_args()
+
+    opt.clean_mesh = False if opt.clean_mesh == "false" else True
+    opt.quads = False if opt.quads == "false" else True
 
     if opt.O:
         opt.fp16 = True
