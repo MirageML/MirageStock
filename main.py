@@ -125,7 +125,14 @@ if __name__ == '__main__':
     if opt.test:
         guidance = None # no need to load guidance model at test
 
-        trainer = Trainer('df', opt, model, guidance, device=device, workspace=opt.workspace, fp16=opt.fp16, use_checkpoint=opt.ckpt)
+        try:
+            trainer = Trainer('df', opt, model, guidance, device=device, workspace=opt.workspace, fp16=opt.fp16, use_checkpoint=opt.ckpt)
+        except:
+            from nerf.network import NeRFNetwork
+            opt.lambda_entropy = 0
+            opt.lambda_opacity = 1e-3
+            model = NeRFNetwork(opt)
+            trainer = Trainer('df', opt, model, guidance, device=device, workspace=opt.workspace, fp16=opt.fp16, use_checkpoint=opt.ckpt)
 
         if opt.gui:
             gui = NeRFGUI(opt, trainer)
