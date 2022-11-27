@@ -12,6 +12,8 @@ import mcubes
 import raymarching
 from .utils import custom_meshgrid, safe_normalize
 
+from dmtet import dmtet
+
 def sample_pdf(bins, weights, n_samples, det=False):
     # This implementation is from NeRF
     # bins: [B, T], old_z_vals
@@ -304,6 +306,11 @@ class NeRFRenderer(nn.Module):
             temp_cleaned_file = os.path.join(path, f'temp_mesh_cleaned.obj')
 
             # os.system(f"blender -b -P blender_remesh_dec.py -- -in {temp_file} -out {temp_cleaned_file}")
+            make_3D = False
+            if args.get('mode', None) == '3D_PRINT':
+                args["mode"] = "SMOOTH"
+                make_3D = True
+
             os.system(f"blender -b -P blender_remesh_dec.py -- " +
                         f"-in {temp_file} -out {temp_cleaned_file} " +
                         f"-adp {args.get('adaptivity', 0.0)} " +
@@ -315,6 +322,17 @@ class NeRFRenderer(nn.Module):
                         f"-smooth {args.get('use_smooth_shade', False)} " +
                         f"-v {args.get('voxel_size', 0.1)} " +
                         f"-dec {args.get('decimate_ratio', 1.0)} ")
+
+            if make_3D:
+                pcd_file = os.path.join(path, f'mesh.pcd')
+                success = False
+                for density in range(1, 5):
+                    os.system(f"/home/obj2pcd/build/obj2pcd {temp_cleaned_file} {pcd_file} -sample_density {2000*density}")
+                    for _ in range(5):
+                        try: success = dmtet(pcd_file, temp_cleaned_file)
+                        except: continue
+                        if success: break
+                    if success: break
 
             mesh = trimesh.load(temp_cleaned_file)
             v_fixed, f_fixed = mesh.vertices, mesh.faces
