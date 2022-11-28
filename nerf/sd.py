@@ -39,8 +39,12 @@ class StableDiffusion(nn.Module):
         self.vae = AutoencoderKL.from_pretrained(stable_diffusion_checkpoint, subfolder="vae", use_auth_token=self.token).to(self.device)
 
         # 2. Load the tokenizer and text encoder to tokenize and encode the text.
-        self.tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-large-patch14")
-        self.text_encoder = CLIPTextModel.from_pretrained("openai/clip-vit-large-patch14").to(self.device)
+        if stable_diffusion_checkpoint == "runwayml/stable-diffusion-v1-5":
+            self.tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-large-patch14")
+            self.text_encoder = CLIPTextModel.from_pretrained("openai/clip-vit-large-patch14").to(self.device)
+        else:
+            self.tokenizer = CLIPTokenizer.from_pretrained(stable_diffusion_checkpoint, subfolder="tokenizer")
+            self.text_encoder = CLIPTextModel.from_pretrained(stable_diffusion_checkpoint, subfolder="text_encoder").to(self.device)
 
         # 3. The UNet model for generating the latents.
         self.unet = UNet2DConditionModel.from_pretrained(stable_diffusion_checkpoint, subfolder="unet", use_auth_token=self.token).to(self.device)
@@ -212,7 +216,3 @@ if __name__ == '__main__':
     # visualize image
     plt.imshow(imgs[0])
     plt.show()
-
-
-
-
