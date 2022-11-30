@@ -372,7 +372,7 @@ class NeRFRenderer(nn.Module):
                     if success: break
 
             if make_3D: mesh = trimesh.load(threed_cleaned_file)
-            else: trimesh.load(temp_cleaned_file)
+            else: mesh = trimesh.load(temp_cleaned_file)
             v_fixed, f_fixed = mesh.vertices, mesh.faces
             v = torch.from_numpy(v_fixed.astype(np.float32)).float().to(self.density_bitfield.device)
             f = torch.from_numpy(f_fixed.astype(np.int64)).int().to(self.density_bitfield.device)
