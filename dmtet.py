@@ -5,6 +5,7 @@ import open3d as o3d
 import trimesh
 from tqdm import tqdm
 from dmtet_network import Decoder
+import argparse
 
 # arguments and hyperparameters
 device = 'cuda'
@@ -88,5 +89,11 @@ def dmtet(pcd_path, mesh_path):
     trimesh.Trimesh(mesh_verts.detach().cpu().numpy(), mesh_faces.detach().cpu().numpy()).export(mesh_path)
     return True
 
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--pcd_path', type=str, default='workspace/mesh/mesh.pcd')
+    parser.add_argument('--mesh_path', type=str, default='workspace/mesh/temp_mesh_cleaned.obj')
+    args = parser.parse_args()
+    dmtet(args.pcd_path, args.mesh_path)
 
 # dmtet("workspace/mesh/mesh.pcd", "workspace/mesh/mesh_clean.obj")

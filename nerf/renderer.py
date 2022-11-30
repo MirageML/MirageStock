@@ -353,17 +353,21 @@ class NeRFRenderer(nn.Module):
                         f"-dec {args.get('decimate_ratio', 1.0)} ")
 
             if make_3D:
+                threed_cleaned_file = os.path.join(path, f'threed_mesh_cleaned.obj')
                 pcd_file = os.path.join(path, f'mesh.pcd')
                 success = False
                 for density in range(1, 5):
                     os.system(f"/home/obj2pcd/build/obj2pcd {temp_cleaned_file} {pcd_file} -sample_density {2000*density}")
                     for _ in range(5):
-                        try: success = dmtet(pcd_file, temp_cleaned_file)
+                        try:
+                            os.system(f"python3 /home/dreamfusion/dmtet.py --pcd_path {pcd_file} --mesh_path {threed_cleaned_file}")
+                            success = True if os.path.exists(threed_cleaned_file) else False
                         except: continue
                         if success: break
                     if success: break
 
-            mesh = trimesh.load(temp_cleaned_file)
+            if make_3D: mesh = trimesh.load(threed_cleaned_file)
+            else: trimesh.load(temp_cleaned_file)
             v_fixed, f_fixed = mesh.vertices, mesh.faces
             v = torch.from_numpy(v_fixed.astype(np.float32)).float().to(self.density_bitfield.device)
             f = torch.from_numpy(f_fixed.astype(np.int64)).int().to(self.density_bitfield.device)
@@ -377,7 +381,10 @@ class NeRFRenderer(nn.Module):
 
         _export(v, f)
         obj_file = os.path.join(path, f'mesh.obj')
-        os.system(f"blender -b -P blender_cleanup.py -- -in {obj_file} -out {obj_file} -quads {args.get('quads', False)}")
+        if clean_mesh:
+            os.remove(os.path.join(path, f'threed_mesh_cleaned.obj'))
+        else:
+            os.system(f"blender -b -P blender_cleanup.py -- -in {obj_file} -out {obj_file} -quads {args.get('quads', False)}")
 
 
     def run(self, rays_o, rays_d, num_steps=128, upsample_steps=128, light_d=None, ambient_ratio=1.0, shading='albedo', bg_color=None, perturb=False, **kwargs):
