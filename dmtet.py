@@ -1,3 +1,4 @@
+import os
 import torch
 import kaolin
 import numpy as np
@@ -86,7 +87,16 @@ def dmtet(pcd_path, mesh_path):
         scheduler.step()
 
     # Save Mesh
-    trimesh.Trimesh(mesh_verts.detach().cpu().numpy(), mesh_faces.detach().cpu().numpy()).export(mesh_path)
+    mesh = trimesh.Trimesh(mesh_verts.detach().cpu().numpy(), mesh_faces.detach().cpu().numpy())
+    trimesh.repair.broken_faces(mesh)
+    trimesh.repair.fill_holes(mesh)
+    trimesh.repair.fix_inversion(mesh)
+    trimesh.repair.fix_winding(mesh)
+
+    base_path = os.path.dirname(os.path.abspath(mesh_path))
+    mesh.export(os.path.join(base_path, 'mesh.stl'))
+    mesh.export(mesh_path)
+
     return True
 
 if __name__ == '__main__':
