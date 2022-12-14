@@ -374,8 +374,8 @@ class NeRFRenderer(nn.Module):
             if make_3D: mesh = trimesh.load(threed_cleaned_file)
             else: mesh = trimesh.load(temp_cleaned_file)
             v_fixed, f_fixed = mesh.vertices, mesh.faces
-            v = torch.from_numpy(v_fixed.astype(np.float32)).float().to(self.density_bitfield.device)
-            f = torch.from_numpy(f_fixed.astype(np.int64)).int().to(self.density_bitfield.device)
+            v = torch.from_numpy(v_fixed.astype(np.float32)).float().to(self.aabb_train.device)
+            f = torch.from_numpy(f_fixed.astype(np.int64)).int().to(self.aabb_train.device)
 
             # remove temp files
             os.remove(os.path.join(path, f'temp_mesh.obj'))
@@ -609,10 +609,6 @@ class NeRFRenderer(nn.Module):
 
         # mix background color
         if self.bg_radius > 0:
-<<<<<<< HEAD
-=======
-
->>>>>>> Cleaner Low Poly Meshes with Dreamfusion
             # use the bg model to calculate bg_color
             bg_color = self.background(rays_d) # [N, 3]
 
