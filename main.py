@@ -22,7 +22,7 @@ if __name__ == '__main__':
     parser.add_argument('--workspace', type=str, default='workspace')
     parser.add_argument('--guidance', type=str, default='stable-diffusion', help='choose from [stable-diffusion, clip]')
     parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--stable_diffusion_checkpoint', type=str, default='runwayml/stable-diffusion-v1-5', help='stable diffusion checkpoint')
+    parser.add_argument('--stable_diffusion_checkpoint', type=str, default='stabilityai/stable-diffusion-2-1-base', help='stable diffusion checkpoint')
 
     ### training options
     parser.add_argument('--iters', type=int, default=10000, help="training iters")
