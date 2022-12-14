@@ -9,13 +9,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from torch.cuda.amp import custom_bwd, custom_fwd 
+from torch.cuda.amp import custom_bwd, custom_fwd
 
 class SpecifyGradient(torch.autograd.Function):
     @staticmethod
     @custom_fwd
     def forward(ctx, input_tensor, gt_grad):
-        ctx.save_for_backward(gt_grad) 
+        ctx.save_for_backward(gt_grad)
         return torch.zeros([1], device=input_tensor.device, dtype=input_tensor.dtype) # dummy loss value
 
     @staticmethod
@@ -39,9 +39,8 @@ class StableDiffusion(nn.Module):
         self.sd_version = sd_version
 
         print(f'[INFO] loading stable diffusion...')
-        
-        if hf_key is not None:
-            print(f'[INFO] using hugging face custom model key: {hf_key}')
+
+        if hf_key:
             model_key = hf_key
         elif self.sd_version == '2.1':
             model_key = "stabilityai/stable-diffusion-2-1-base"
@@ -60,7 +59,7 @@ class StableDiffusion(nn.Module):
 
         if is_xformers_available():
             self.unet.enable_xformers_memory_efficient_attention()
-        
+
         self.scheduler = DDIMScheduler.from_pretrained(model_key, subfolder="scheduler")
         # self.scheduler = PNDMScheduler.from_pretrained(model_key, subfolder="scheduler")
 
@@ -92,7 +91,7 @@ class StableDiffusion(nn.Module):
 
 
     def train_step(self, text_embeddings, pred_rgb, guidance_scale=100):
-        
+
         # interp to 512x512 to be fed into vae.
 
         pred_rgb_512 = F.interpolate(pred_rgb, (512, 512), mode='bilinear', align_corners=False)
@@ -126,9 +125,9 @@ class StableDiffusion(nn.Module):
         grad = torch.nan_to_num(grad)
 
         # since we omitted an item in grad, we need to use the custom function to specify the gradient
-        loss = SpecifyGradient.apply(latents, grad) 
+        loss = SpecifyGradient.apply(latents, grad)
 
-        return loss 
+        return loss
 
     def produce_latents(self, text_embeddings, height=512, width=512, num_inference_steps=50, guidance_scale=7.5, latents=None):
 
@@ -152,7 +151,7 @@ class StableDiffusion(nn.Module):
 
                 # compute the previous noisy sample x_t -> x_t-1
                 latents = self.scheduler.step(noise_pred, t, latents)['prev_sample']
-        
+
         return latents
 
     def decode_latents(self, latents):
@@ -163,7 +162,7 @@ class StableDiffusion(nn.Module):
             imgs = self.vae.decode(latents).sample
 
         imgs = (imgs / 2 + 0.5).clamp(0, 1)
-        
+
         return imgs
 
     def encode_imgs(self, imgs):
@@ -180,7 +179,7 @@ class StableDiffusion(nn.Module):
 
         if isinstance(prompts, str):
             prompts = [prompts]
-        
+
         if isinstance(negative_prompts, str):
             negative_prompts = [negative_prompts]
 
@@ -189,7 +188,7 @@ class StableDiffusion(nn.Module):
 
         # Text embeds -> img latents
         latents = self.produce_latents(text_embeds, height=height, width=width, latents=latents, num_inference_steps=num_inference_steps, guidance_scale=guidance_scale) # [1, 4, 64, 64]
-        
+
         # Img latents -> imgs
         imgs = self.decode_latents(latents) # [1, 3, 512, 512]
 
