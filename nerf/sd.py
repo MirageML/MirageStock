@@ -24,7 +24,7 @@ class StableDiffusion(nn.Module):
         self.sd_version = sd_version
 
         print(f'[INFO] loading stable diffusion...')
-        
+
         if hf_key:
             model_key = hf_key
         elif self.sd_version == '2.0':
@@ -39,7 +39,7 @@ class StableDiffusion(nn.Module):
         self.tokenizer = CLIPTokenizer.from_pretrained(model_key, subfolder="tokenizer")
         self.text_encoder = CLIPTextModel.from_pretrained(model_key, subfolder="text_encoder").to(self.device)
         self.unet = UNet2DConditionModel.from_pretrained(model_key, subfolder="unet").to(self.device)
-        
+
         self.scheduler = DDIMScheduler.from_config(model_key, subfolder="scheduler")
         # self.scheduler = PNDMScheduler.from_config(model_key, subfolder="scheduler")
 
@@ -71,7 +71,7 @@ class StableDiffusion(nn.Module):
 
 
     def train_step(self, text_embeddings, pred_rgb, guidance_scale=100):
-        
+
         # interp to 512x512 to be fed into vae.
 
         # _t = time.time()
@@ -139,7 +139,7 @@ class StableDiffusion(nn.Module):
 
                 # compute the previous noisy sample x_t -> x_t-1
                 latents = self.scheduler.step(noise_pred, t, latents)['prev_sample']
-        
+
         return latents
 
     def decode_latents(self, latents):
@@ -150,7 +150,7 @@ class StableDiffusion(nn.Module):
             imgs = self.vae.decode(latents).sample
 
         imgs = (imgs / 2 + 0.5).clamp(0, 1)
-        
+
         return imgs
 
     def encode_imgs(self, imgs):
@@ -167,7 +167,7 @@ class StableDiffusion(nn.Module):
 
         if isinstance(prompts, str):
             prompts = [prompts]
-        
+
         if isinstance(negative_prompts, str):
             negative_prompts = [negative_prompts]
 
@@ -176,7 +176,7 @@ class StableDiffusion(nn.Module):
 
         # Text embeds -> img latents
         latents = self.produce_latents(text_embeds, height=height, width=width, latents=latents, num_inference_steps=num_inference_steps, guidance_scale=guidance_scale) # [1, 4, 64, 64]
-        
+
         # Img latents -> imgs
         imgs = self.decode_latents(latents) # [1, 3, 512, 512]
 

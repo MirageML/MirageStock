@@ -22,6 +22,7 @@ if __name__ == '__main__':
     parser.add_argument('--workspace', type=str, default='workspace')
     parser.add_argument('--guidance', type=str, default='stable-diffusion', help='choose from [stable-diffusion, clip]')
     parser.add_argument('--seed', type=int, default=0)
+    parser.add_argument('--stable_diffusion_checkpoint', type=str, default='runwayml/stable-diffusion-v1-5', help='stable diffusion checkpoint')
 
     ### training options
     parser.add_argument('--iters', type=int, default=10000, help="training iters")
@@ -47,7 +48,7 @@ if __name__ == '__main__':
     parser.add_argument('--w', type=int, default=64, help="render width for NeRF in training")
     parser.add_argument('--h', type=int, default=64, help="render height for NeRF in training")
     parser.add_argument('--jitter_pose', action='store_true', help="add jitters to the randomly sampled camera poses")
-    
+
     ### dataset options
     parser.add_argument('--bound', type=float, default=1, help="assume the scene is bounded in box(-bound, bound)")
     parser.add_argument('--dt_gamma', type=float, default=0, help="dt_gamma (>=0) for adaptive ray marching. set to 0 to disable, >0 to accelerate rendering (but usually with worse quality)")
@@ -116,17 +117,17 @@ if __name__ == '__main__':
         if opt.gui:
             gui = NeRFGUI(opt, trainer)
             gui.render()
-        
+
         else:
             test_loader = NeRFDataset(opt, device=device, type='test', H=opt.H, W=opt.W, size=100).dataloader()
             trainer.test(test_loader)
-            
+
             if opt.save_mesh:
                 trainer.save_mesh(resolution=256)
-            
-    
+
+
     else:
-        
+
         train_loader = NeRFDataset(opt, device=device, type='train', H=opt.h, W=opt.w, size=100).dataloader()
 
         optimizer = lambda model: torch.optim.Adam(model.get_params(opt.lr), betas=(0.9, 0.99), eps=1e-15)
@@ -137,7 +138,7 @@ if __name__ == '__main__':
 
         if opt.guidance == 'stable-diffusion':
             from nerf.sd import StableDiffusion
-            guidance = StableDiffusion(device, opt.sd_version)
+            guidance = StableDiffusion(device, opt.sd_version, hf_key=opt.stable_diffusion_checkpoint)
         elif opt.guidance == 'clip':
             from nerf.clip import CLIP
             guidance = CLIP(device)
@@ -151,7 +152,7 @@ if __name__ == '__main__':
 
             gui = NeRFGUI(opt, trainer)
             gui.render()
-        
+
         else:
             valid_loader = NeRFDataset(opt, device=device, type='val', H=opt.H, W=opt.W, size=5).dataloader()
 
