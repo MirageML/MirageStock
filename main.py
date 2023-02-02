@@ -58,7 +58,6 @@ if __name__ == '__main__':
     # rendering resolution in training, decrease this if CUDA OOM.
     parser.add_argument('--w', type=int, default=64, help="render width for NeRF in training")
     parser.add_argument('--h', type=int, default=64, help="render height for NeRF in training")
-    parser.add_argument('--jitter_pose', action='store_true', help="add jitters to the randomly sampled camera poses")
 
     ### dataset options
     parser.add_argument('--bound', type=float, default=1, help="assume the scene is bounded in box(-bound, bound)")

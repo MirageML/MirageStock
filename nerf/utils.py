@@ -149,6 +149,7 @@ def srgb_to_linear(x):
 
 class Trainer(object):
     def __init__(self,
+                 argv,
                  name, # name of this experiment
                  opt, # extra conf
                  model, # network
@@ -502,10 +503,10 @@ class Trainer(object):
         os.makedirs(save_path, exist_ok=True)
 
         if loader is None: # mcubes
-            self.model.export_mesh(save_path, resolution=self.opt.mcubes_resolution, decimate_target=self.opt.decimate_target, args=None)
+            self.model.export_mesh(save_path, resolution=self.opt.mcubes_resolution, decimate_target=self.opt.decimate_target, args=args)
         else: # poisson (TODO: not working currently...)
             points, normals = self.generate_point_cloud(loader)
-            self.model.export_mesh(save_path, points=points, normals=normals, decimate_target=self.opt.decimate_target, args=None)
+            self.model.export_mesh(save_path, points=points, normals=normals, decimate_target=self.opt.decimate_target, args=args)
 
         self.log(f"==> Finished saving mesh.")
 

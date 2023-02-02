@@ -332,8 +332,8 @@ class NeRFRenderer(nn.Module):
                 fp.write(f'Ns 0.000000 \n')
                 fp.write(f'map_Kd {name}albedo.png \n')
 
-        clean_mesh = args.get("clean_mesh", False)
-        if clean_mesh:
+        clean_up_mesh = args.get("clean_mesh", False)
+        if clean_up_mesh:
             _export(v, f, h0=2048, w0=2048, ssaa=1, name='temp_')
 
             temp_file = os.path.join(path, f'temp_mesh.obj')
@@ -386,7 +386,7 @@ class NeRFRenderer(nn.Module):
 
         _export(v, f)
         obj_file = os.path.join(path, f'mesh.obj')
-        if clean_mesh:
+        if clean_up_mesh:
             os.remove(os.path.join(path, f'threed_mesh_cleaned.obj'))
         else:
             os.system(f"blender -b -P blender_cleanup.py -- -in {obj_file} -out {obj_file} -quads {args.get('quads', False)}")
