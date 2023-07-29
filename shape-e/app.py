@@ -55,25 +55,20 @@ def decode_latent_images_foo(
     return decoded
 
 
-def generate_3D(input):
+def generate_3D(input, model, xm):
     set_state('Entered generate function...')
 
     # if input is a string, it's a text prompt
-    xm = load_model('transmitter', device=device)
     diffusion = diffusion_from_config(load_config('diffusion'))
     batch_size = 4
 
     if isinstance(input, Image.Image):
         input = expand2square(input)
-        model = load_model('image300M', device=device)
         guidance_scale = 3.0
         model_kwargs = dict(images=[input] * batch_size)
     else:
-        model = load_model('text300M', device=device)
         guidance_scale = 15.0
         model_kwargs = dict(texts=[input] * batch_size)
-
-
 
     latents = sample_latents(
         batch_size=batch_size,
@@ -106,19 +101,21 @@ def generate_3D(input):
 
     tm=rm.tri_mesh()
 
-    with open("output/mesh.ply",'wb') as f:
+    print("Wrting")
+    with open("mesh.ply",'wb') as f:
         tm.write_ply(f)
+        print("Wrote mesh to mesh.ply")
 
 
     set_state('Converting to point cloud...')
     # pc = sampler.output_to_point_clouds(samples)[0]
 
     set_state('Converting to mesh...')
-    # save_ply(pc, 'output/mesh.ply', grid_size)
+    # save_ply(pc, 'mesh.ply', grid_size)
 
     set_state('')
 
-    return 'output/mesh.ply', ply_to_glb('output/mesh.ply', 'output/mesh.glb')
+    return ply_to_glb('mesh.ply', 'mesh.glb')
 
 def expand2square(img):
     width, height = img.size
