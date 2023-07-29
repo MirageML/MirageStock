@@ -8,8 +8,9 @@ modal token new
 ### The prompt can be text or a base64 string version of an image
 ```
 pip install -r requirements.txt
-python3 -m modal serve modal_shap_e.py
-python3 modal_shap_e.py --prompt "a dog"
+python -m modal serve modal_shap_e.py
+# Change line 84 to match the endpoint URL from modal serve
+python modal_shap_e.py --prompt "a dog"
 ```
 
 ## Run with Docker:
@@ -20,5 +21,5 @@ docker run -it --gpus all shap-e python3 app.py --input 'a dog'
 
 ## Run the Code Locally:
 ```
-python3 app.py --input 'a dog'
+python app.py --input 'a dog'
 ```

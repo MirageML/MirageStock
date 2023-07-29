@@ -1,6 +1,8 @@
 import os
 import time
 import torch
+import requests
+import argparse
 from PIL import Image
 from io import BytesIO
 from pydantic import BaseModel
@@ -73,14 +75,15 @@ class ShapE:
             return ""
 
 if __name__ == "__main__":
-    import requests
-    import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--prompt", type=str, default="dog")
     args = parser.parse_args()
     data = {"prompt": args.prompt}
+
+    # Change this endpoint to match your own
     response = requests.post("https://mirageml--shap-e-shape-image-to-text-amankishore-dev.modal.run", json=data)
     response = response.json()
+
     fh = open("mesh.glb", "wb")
     fh.write(base64.b64decode(response["glb"]))
     fh.close()
