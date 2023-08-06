@@ -1,4 +1,0 @@
-pyyaml
-ipywidgets
-git+https://github.com/openai/shap-e.git
-trimesh
