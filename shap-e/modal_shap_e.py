@@ -44,9 +44,10 @@ class ShapE:
 
     @stub.function(gpu="A10G", timeout=180)
     @web_endpoint(method="POST")
-    def image_to_text(self, item: Item):
+    def prompt_3D(self, item: Item):
         try:
             start = time.time()
+            init_image = False
             if item.prompt.startswith("data:image"):
                 item.prompt = item.prompt.replace("data:image/png;base64,", "")
                 item.prompt = item.prompt.replace("data:image/jpeg;base64,", "")
@@ -62,13 +63,15 @@ class ShapE:
 
                 item.prompt = Image.open(BytesIO(base64.b64decode(item.image))).convert('RGB')
                 glb_path = generate_3D(item.prompt, self.image_model, self.xm)
+                init_image = True
             else:
                 glb_path = generate_3D(item.prompt, self.text_model, self.xm)
 
             print("Time Taken:", time.time() - start)
 
             return {
-                "glb": str(base64.b64encode(open(glb_path, 'rb').read()).decode('utf-8'))
+                "glb": str(base64.b64encode(open(glb_path, 'rb').read()).decode('utf-8')),
+                "init_image": init_image
             }
         except Exception as e:
             print(e)
@@ -81,7 +84,7 @@ if __name__ == "__main__":
     data = {"prompt": args.prompt}
 
     # Change this endpoint to match your own
-    response = requests.post("https://mirageml--shap-e-shape-image-to-text-amankishore-dev.modal.run", json=data)
+    response = requests.post("https://mirageml--shap-e-shape-prompt-3d-amankishore-dev.modal.run", json=data)
     response = response.json()
 
     fh = open("mesh.glb", "wb")
