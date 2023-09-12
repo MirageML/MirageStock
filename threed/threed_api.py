@@ -11,7 +11,7 @@ import typer
 import warnings
 warnings.filterwarnings("ignore")
 
-from app import generate_3D
+from open_source.shap_e.app import generate_3D
 from shap_e.models.download import load_model
 
 from modal import Image, Secret, Stub, web_endpoint, create_package_mounts
@@ -28,23 +28,23 @@ def download_models():
 image = (
     Image.debian_slim(python_version="3.10")
     .apt_install("git")
-    .pip_install_from_requirements("requirements.txt")
+    .pip_install_from_requirements("open_source/shap_e/requirements.txt")
     .run_function(download_models)
 )
-stub = Stub("generative-3D", image=image)
+stub = Stub("stock")
 
 class Item(BaseModel):
     prompt: str = None
 
-class ShapE:
+@stub.cls(gpu="A10G", image=image, timeout=180)
+class ThreeD:
     def __enter__(self):
         self.xm = xm = load_model('transmitter', device=device)
         self.image_model = image_model = load_model('image300M', device=device)
         self.text_model = text_model = load_model('text300M', device=device)
 
-    @stub.function(gpu="A10G", timeout=180)
     @web_endpoint(method="POST")
-    def prompt_3D(self, item: Item):
+    def api(self, item: Item):
         try:
             start = time.time()
             init_image = False
@@ -84,7 +84,7 @@ if __name__ == "__main__":
     data = {"prompt": args.prompt}
 
     # Change this endpoint to match your own
-    response = requests.post("https://mirageml--shap-e-shape-prompt-3d-amankishore-dev.modal.run", json=data)
+    response = requests.post("https://mirageml--stock-threed-api-amankishore-dev.modal.run", json=data)
     response = response.json()
 
     fh = open("mesh.glb", "wb")
