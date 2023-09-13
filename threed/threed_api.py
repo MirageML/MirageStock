@@ -24,7 +24,6 @@ def download_models():
     image_model = load_model('image300M', device=device)
     text_model = load_model('text300M', device=device)
 
-
 image = (
     Image.debian_slim(python_version="3.10")
     .apt_install("git")
