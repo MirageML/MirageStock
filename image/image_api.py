@@ -54,7 +54,7 @@ image = (
     )
     .run_function(download_models)
 )
-stub = Stub("stock")
+stub = Stub("stock-image")
 
 class Item(BaseModel):
     prompt: str = None
