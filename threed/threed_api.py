@@ -30,7 +30,7 @@ image = (
     .pip_install_from_requirements("open_source/shap_e/requirements.txt")
     .run_function(download_models)
 )
-stub = Stub("stock")
+stub = Stub("stock-3d")
 
 class Item(BaseModel):
     prompt: str = None
