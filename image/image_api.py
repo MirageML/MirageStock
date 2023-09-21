@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import torch
 import requests
@@ -14,7 +15,9 @@ from diffusers import DiffusionPipeline, AutoencoderKL, UniPCMultistepScheduler
 torch.backends.cuda.matmul.allow_tf32 = True
 
 import modal
-from modal import Secret, Stub, web_endpoint, create_package_mounts
+from modal import web_endpoint
+sys.path.insert(0, '../..')
+from MirageStock import stub
 
 cache_path = "/vol/cache"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -54,14 +57,13 @@ image = (
     )
     .run_function(download_models)
 )
-stub = Stub("stock-image")
 
 class Item(BaseModel):
     prompt: str = None
 
 # Code Adapted from https://github.com/basetenlabs/truss-examples/blob/main/stable-diffusion-xl-1.0
-@stub.cls(gpu="A10G", image=image, timeout=180)
-class ImageGen:
+@stub.cls(gpu="A100", image=image, timeout=180)
+class Image:
     def __enter__(self):
         self.pipe = DiffusionPipeline.from_pretrained(cache_path+"/pipe", torch_dtype=torch.float16)
         self.pipe.unet.to(memory_format=torch.channels_last)
@@ -113,7 +115,7 @@ if __name__ == "__main__":
     data = {"prompt": args.prompt}
 
     # Change this endpoint to match your own
-    response = requests.post("https://mirageml--stock-imagegen-api-amankishore-dev.modal.run", json=data)
+    response = requests.post("https://mirageml--stock-image-api-amankishore-dev.modal.run", json=data)
     response = response.json()
 
     # Save image to file

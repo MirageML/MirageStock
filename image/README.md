@@ -13,9 +13,3 @@ python -m modal serve image_api.py
 python image_api.py --prompt "a dog"
 ```
 
-## Run with Docker:
-```
-docker build -t shap-e .
-docker run -it --gpus all shap-e python3 app.py --input 'a dog'
-```
-

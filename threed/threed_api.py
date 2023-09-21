@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import torch
 import requests
@@ -14,7 +15,10 @@ warnings.filterwarnings("ignore")
 from open_source.shap_e.app import generate_3D
 from shap_e.models.download import load_model
 
-from modal import Image, Secret, Stub, web_endpoint, create_package_mounts
+import modal
+from modal import web_endpoint, create_package_mounts
+sys.path.insert(0, '../..')
+from MirageStock import stub
 
 cache_path = "/vol/cache"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -25,17 +29,16 @@ def download_models():
     text_model = load_model('text300M', device=device)
 
 image = (
-    Image.debian_slim(python_version="3.10")
+    modal.Image.debian_slim(python_version="3.10")
     .apt_install("git")
     .pip_install_from_requirements("open_source/shap_e/requirements.txt")
     .run_function(download_models)
 )
-stub = Stub("stock-3d")
 
 class Item(BaseModel):
     prompt: str = None
 
-@stub.cls(gpu="A10G", image=image, timeout=180)
+@stub.cls(gpu="A100", image=image, timeout=180)
 class ThreeD:
     def __enter__(self):
         self.xm = xm = load_model('transmitter', device=device)
