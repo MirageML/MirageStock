@@ -1,30 +1,23 @@
 import os
-import json
+import sys
 import time
 import torch
-import requests
-import argparse
-from PIL import Image
 from io import BytesIO
 from pydantic import BaseModel
 import base64
 import typer
 from typing import Any
-from diffusers import DiffusionPipeline, DPMSolverMultistepScheduler
-from diffusers.utils import export_to_video
 
 import modal
 from modal import web_endpoint
-
-import sys
-sys.path.insert(0, '../..')
-from MirageStock import stub
+from ..common import stub
 
 cache_path = "/vol/cache"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def download_models():
+    from diffusers import DiffusionPipeline, DPMSolverMultistepScheduler
     pipe = DiffusionPipeline.from_pretrained("cerspense/zeroscope_v2_576w", torch_dtype=torch.float16)
     pipe.scheduler = DPMSolverMultistepScheduler.from_config(pipe.scheduler.config)
     pipe.save_pretrained(cache_path+"/pipe", safe_serialization=True)
@@ -63,6 +56,7 @@ class Item(BaseModel):
 @stub.cls(gpu="A100", image=image, timeout=180)
 class Video:
     def __enter__(self):
+        from diffusers import DiffusionPipeline, DPMSolverMultistepScheduler
         self.pipe = DiffusionPipeline.from_pretrained(cache_path+"/pipe", torch_dtype=torch.float16)
         self.pipe.scheduler = DPMSolverMultistepScheduler.from_config(self.pipe.scheduler.config)
         self.pipe.enable_model_cpu_offload()
@@ -76,6 +70,8 @@ class Video:
 
     @web_endpoint(method="POST")
     def api(self, item: Item):
+        from PIL import Image
+        from diffusers.utils import export_to_video
         try:
             start = time.time()
 
@@ -98,18 +94,3 @@ class Video:
         except Exception as e:
             print(e)
             return str(e)
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--prompt", type=str, default="a dog running")
-    args = parser.parse_args()
-    data = {"prompt": args.prompt}
-
-    # Change this endpoint to match your own
-    response = requests.post("https://mirageml--stock-video-api-amankishore-dev.modal.run", json=data)
-    responseData = response.json()
-
-    # Save mp4 to file
-    fh = open("video.mp4", "wb")
-    fh.write(base64.b64decode(responseData["mp4"]))
-    fh.close()

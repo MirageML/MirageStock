@@ -1,28 +1,20 @@
-import os
 import sys
 import time
 import torch
-import requests
-import argparse
-from io import BytesIO
 from pydantic import BaseModel
 import base64
-import scipy
-import typer
-from typing import Any
-from transformers import AutoProcessor, MusicgenForConditionalGeneration
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
 import modal
 from modal import web_endpoint
-sys.path.insert(0, '../..')
-from MirageStock import stub
+from ..common import stub
 
 cache_path = "/vol/cache"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def download_models():
+    from transformers import AutoProcessor, MusicgenForConditionalGeneration
     processor = AutoProcessor.from_pretrained("facebook/musicgen-small")
     processor.save_pretrained(cache_path+"/processor", safe_serialization=True)
 
@@ -48,11 +40,13 @@ class Item(BaseModel):
 @stub.cls(gpu="A10G", image=image, timeout=180)
 class Audio:
     def __enter__(self):
+        from transformers import AutoProcessor, MusicgenForConditionalGeneration
         self.processor = AutoProcessor.from_pretrained(cache_path+"/processor")
         self.model = MusicgenForConditionalGeneration.from_pretrained(cache_path+"/model")
 
     @web_endpoint(method="POST")
     def api(self, item: Item):
+        import scipy
         try:
             start = time.time()
             inputs = self.processor(
@@ -76,19 +70,3 @@ class Audio:
         except Exception as e:
             print(e)
             return ""
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--prompt", type=str, default="a classical song")
-    args = parser.parse_args()
-    data = {"prompt": args.prompt}
-
-    # Change this endpoint to match your own
-    response = requests.post("https://mirageml--stock-audio-api-amankishore-dev.modal.run", json=data)
-    response = response.json()
-
-    # Save wav base64 to file
-    wav_data = base64.b64decode(response["wav"])
-    fh = open("music.wav", "wb")
-    fh.write(wav_data)
-    fh.close()

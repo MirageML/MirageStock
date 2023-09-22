@@ -1,28 +1,21 @@
-import os
 import sys
 import time
 import torch
-import requests
-import argparse
-from PIL import Image
 from io import BytesIO
 from pydantic import BaseModel
 import base64
-import typer
-from typing import Any
-from diffusers import DiffusionPipeline, AutoencoderKL, UniPCMultistepScheduler
 
 torch.backends.cuda.matmul.allow_tf32 = True
 
 import modal
 from modal import web_endpoint
-sys.path.insert(0, '../..')
-from MirageStock import stub
+from ..common import stub 
 
 cache_path = "/vol/cache"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def download_models():
+    from diffusers import DiffusionPipeline, AutoencoderKL, UniPCMultistepScheduler
     vae = AutoencoderKL.from_pretrained(
         "madebyollin/sdxl-vae-fp16-fix", torch_dtype=torch.float16
     )
@@ -65,6 +58,7 @@ class Item(BaseModel):
 @stub.cls(gpu="A100", image=image, timeout=180)
 class Image:
     def __enter__(self):
+        from diffusers import DiffusionPipeline, AutoencoderKL, UniPCMultistepScheduler
         self.pipe = DiffusionPipeline.from_pretrained(cache_path+"/pipe", torch_dtype=torch.float16)
         self.pipe.unet.to(memory_format=torch.channels_last)
         self.pipe.to(device)
@@ -107,18 +101,3 @@ class Image:
         except Exception as e:
             print(e)
             return ""
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--prompt", type=str, default="dog")
-    args = parser.parse_args()
-    data = {"prompt": args.prompt}
-
-    # Change this endpoint to match your own
-    response = requests.post("https://mirageml--stock-image-api-amankishore-dev.modal.run", json=data)
-    response = response.json()
-
-    # Save image to file
-    img_data = base64.b64decode(response["png"])
-    img = Image.open(BytesIO(img_data))
-    img.save("image.png")
