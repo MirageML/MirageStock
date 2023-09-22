@@ -1,29 +1,21 @@
-import os
 import sys
 import time
 import torch
-import requests
-import argparse
-from PIL import Image
 from io import BytesIO
 from pydantic import BaseModel
 import base64
-import typer
 import warnings
 warnings.filterwarnings("ignore")
 
-from open_source.shap_e.app import generate_3D
-from shap_e.models.download import load_model
-
 import modal
-from modal import web_endpoint, create_package_mounts
-sys.path.insert(0, '../..')
-from MirageStock import stub
+from modal import web_endpoint
+from ..common import stub
 
 cache_path = "/vol/cache"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def download_models():
+    from shap_e.models.download import load_model
     xm = load_model('transmitter', device=device)
     image_model = load_model('image300M', device=device)
     text_model = load_model('text300M', device=device)
@@ -31,7 +23,13 @@ def download_models():
 image = (
     modal.Image.debian_slim(python_version="3.10")
     .apt_install("git")
-    .pip_install_from_requirements("open_source/shap_e/requirements.txt")
+    .pip_install(
+        "pyyaml",
+        "ipywidgets",
+        "git+https://github.com/openai/shap-e.git",
+        "trimesh",
+        "matplotlib"
+    )
     .run_function(download_models)
 )
 
@@ -41,12 +39,15 @@ class Item(BaseModel):
 @stub.cls(gpu="A100", image=image, timeout=180)
 class ThreeD:
     def __enter__(self):
+        from shap_e.models.download import load_model
         self.xm = xm = load_model('transmitter', device=device)
         self.image_model = image_model = load_model('image300M', device=device)
         self.text_model = text_model = load_model('text300M', device=device)
 
     @web_endpoint(method="POST")
     def api(self, item: Item):
+        from PIL import Image
+        from .open_source.shap_e.app import generate_3D
         try:
             start = time.time()
             init_image = False
@@ -78,17 +79,3 @@ class ThreeD:
         except Exception as e:
             print(e)
             return ""
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--prompt", type=str, default="dog")
-    args = parser.parse_args()
-    data = {"prompt": args.prompt}
-
-    # Change this endpoint to match your own
-    response = requests.post("https://mirageml--stock-threed-api-amankishore-dev.modal.run", json=data)
-    response = response.json()
-
-    fh = open("mesh.glb", "wb")
-    fh.write(base64.b64decode(response["glb"]))
-    fh.close()

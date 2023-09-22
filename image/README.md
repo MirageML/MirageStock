@@ -5,11 +5,8 @@ pip install modal-client
 modal token new
 ```
 ## Then run the code:
-### The prompt can be text or a base64 string version of an image
 ```
-pip install -r requirements.txt
-python -m modal serve image_api.py
-# Change line 84 to match the endpoint URL from modal serve
-python image_api.py --prompt "a dog"
+python -m modal serve MirageStock       # Executed at the Top-Level 
+python image_local.py --prompt "a dog"  # Change line 12 to match the endpoint URL from modal serve
 ```
 

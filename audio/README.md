@@ -5,11 +5,8 @@ pip install modal-client
 modal token new
 ```
 ## Then run the code:
-### The prompt can be text or a base64 string version of an image
 ```
-pip install -r requirements.txt
-python -m modal serve audio_api.py
-# Change line 84 to match the endpoint URL from modal serve
-python audio_api.py --prompt "a dog"
+python -m modal serve MirageStock                # Executed at the Top-Level 
+python audio_api.py --prompt "a classical song"  # Change line 12 to match the endpoint URL from modal serve
 ```
 
