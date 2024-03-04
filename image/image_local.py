@@ -10,7 +10,7 @@ if __name__ == "__main__":
     data = {"prompt": args.prompt}
 
     # Change this endpoint to match your own
-    response = requests.post("https://mirageml--stock-image-api-amankishore-dev.modal.run", json=data)
+    response = requests.post("https://mirageml--stock-image-api-dev.modal.run", json=data)
     response = response.json()
 
     # Save image to file

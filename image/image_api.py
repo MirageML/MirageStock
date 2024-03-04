@@ -6,47 +6,37 @@ from pydantic import BaseModel
 import base64
 
 torch.backends.cuda.matmul.allow_tf32 = True
+torch.backends.cuda.enable_mem_efficient_sdp(False)
+torch.backends.cuda.enable_flash_sdp(False)
+
 
 import modal
 from modal import web_endpoint
-from ..common import stub 
+from ..common import stub
 
 cache_path = "/vol/cache"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def download_models():
-    from diffusers import DiffusionPipeline, AutoencoderKL, UniPCMultistepScheduler
-    vae = AutoencoderKL.from_pretrained(
-        "madebyollin/sdxl-vae-fp16-fix", torch_dtype=torch.float16
-    )
-    pipe = DiffusionPipeline.from_pretrained(
-        "stabilityai/stable-diffusion-xl-base-1.0",
-        vae=vae,
-        torch_dtype=torch.float16,
-        variant="fp16",
-        use_safetensors=True,
-    )
-    pipe.save_pretrained(cache_path+"/pipe", safe_serialization=True)
-
-    refiner = DiffusionPipeline.from_pretrained(
-        "stabilityai/stable-diffusion-xl-refiner-1.0",
-        text_encoder_2=pipe.text_encoder_2,
-        vae=pipe.vae,
-        torch_dtype=torch.float16,
-        use_safetensors=True,
-        variant="fp16",
-    )
-    refiner.save_pretrained(cache_path+"/refiner", safe_serialization=True)
+    # from diffusers import DiffusionPipeline, AutoencoderKL, UniPCMultistepScheduler
+    from diffusers import StableCascadeDecoderPipeline, StableCascadePriorPipeline
+    prior = StableCascadePriorPipeline.from_pretrained("stabilityai/stable-cascade-prior", torch_dtype=torch.bfloat16).to(device)
+    prior.save_pretrained(cache_path+"/prior", safe_serialization=True)
+    decoder = StableCascadeDecoderPipeline.from_pretrained("stabilityai/stable-cascade",  torch_dtype=torch.float16).to(device)
+    decoder.save_pretrained(cache_path+"/decoder", safe_serialization=True)
 
 
 image = (
     modal.Image.debian_slim(python_version="3.10")
+    .apt_install(
+        "git"
+    )
     .pip_install(
         "transformers",
-        "diffusers",
+        "git+https://github.com/kashif/diffusers.git@a3dc21385b7386beb3dab3a9845962ede6765887",
         "accelerate",
         "safetensors",
-        "xformers"
+        "xformers",
     )
     .run_function(download_models)
 )
@@ -58,35 +48,33 @@ class Item(BaseModel):
 @stub.cls(gpu="A100", image=image, timeout=180)
 class Image:
     def __enter__(self):
-        from diffusers import DiffusionPipeline, AutoencoderKL, UniPCMultistepScheduler
-        self.pipe = DiffusionPipeline.from_pretrained(cache_path+"/pipe", torch_dtype=torch.float16)
-        self.pipe.unet.to(memory_format=torch.channels_last)
-        self.pipe.to(device)
-        self.pipe.scheduler = UniPCMultistepScheduler.from_config(self.pipe.scheduler.config)
-        self.pipe.enable_xformers_memory_efficient_attention()
-
-        self.refiner = DiffusionPipeline.from_pretrained(cache_path+"/refiner", torch_dtype=torch.float16)
-        self.refiner.to(device)
-        self.refiner.enable_xformers_memory_efficient_attention()
+        # from diffusers import DiffusionPipeline, AutoencoderKL, UniPCMultistepScheduler
+        from diffusers import StableCascadeDecoderPipeline, StableCascadePriorPipeline
+        self.prior = StableCascadePriorPipeline.from_pretrained(cache_path+"/prior", torch_dtype=torch.bfloat16).to(device)
+        self.decoder = StableCascadeDecoderPipeline.from_pretrained(cache_path+"/decoder",  torch_dtype=torch.float16).to(device)
 
     @web_endpoint(method="POST")
     def api(self, item: Item):
         try:
             start = time.time()
-            image = self.pipe(prompt=item.prompt,
-                          negative_prompt=None,
-                          num_inference_steps=20,
-                          denoising_end=0.8,
-                          guidance_scale=7.5,
-                          output_type="latent").images[0]
-            scheduler = self.pipe.scheduler
-            self.refiner.scheduler = scheduler
-            image = self.refiner(prompt=item.prompt,
-                                negative_prompt=None,
-                                num_inference_steps=20,
-                                denoising_start=0.8,
-                                guidance_scale=7.5,
-                                image=image[None, :]).images[0]
+            prior_output = self.prior(
+                prompt=item.prompt,
+                height=1024,
+                width=1024,
+                negative_prompt="",
+                guidance_scale=4.0,
+                num_images_per_prompt=1,
+                num_inference_steps=20
+            )
+            decoder_output = self.decoder(
+                image_embeddings=prior_output.image_embeddings.half(),
+                prompt=item.prompt,
+                negative_prompt="",
+                guidance_scale=0.0,
+                output_type="pil",
+                num_inference_steps=10
+            ).images
+            image = decoder_output[0]
 
             # Convert PIL Image to base64 string
             buffered = BytesIO()
