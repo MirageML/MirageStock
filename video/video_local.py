@@ -9,7 +9,7 @@ if __name__ == "__main__":
     data = {"prompt": args.prompt}
 
     # Change this endpoint to match your own
-    response = requests.post("https://mirageml--stock-video-api-amankishore-dev.modal.run", json=data)
+    response = requests.post("https://mirageml--stock-video-api-dev.modal.run", json=data)
     responseData = response.json()
 
     # Save mp4 to file

@@ -9,8 +9,9 @@ if __name__ == "__main__":
     data = {"prompt": args.prompt}
 
     # Change this endpoint to match your own
-    response = requests.post("https://mirageml--stock-threed-api-amankishore-dev.modal.run", json=data)
+    response = requests.post("https://mirageml--stock-threed-api-dev.modal.run", json=data)
     response = response.json()
+    print(response)
 
     fh = open("mesh.glb", "wb")
     fh.write(base64.b64decode(response["glb"]))
