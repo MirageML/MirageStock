@@ -45,7 +45,7 @@ class Item(BaseModel):
     prompt: str = None
 
 # Code Adapted from https://github.com/basetenlabs/truss-examples/blob/main/stable-diffusion-xl-1.0
-@stub.cls(gpu="A100", keep_warm=1, concurrency_limit=10, image=image, timeout=180)
+@stub.cls(gpu="A100", keep_warm=0, concurrency_limit=10, image=image, timeout=180)
 class Image:
     def __enter__(self):
         # from diffusers import DiffusionPipeline, AutoencoderKL, UniPCMultistepScheduler
